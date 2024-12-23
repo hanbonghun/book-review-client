@@ -29,11 +29,31 @@ const Header = () => {
   };
 
   // 로그아웃 핸들러
-  const handleLogout = () => {
-    localStorage.removeItem('accessToken');
-    setIsLoggedIn(false);
-    setUserInfo(null);
-    navigate('/');
+  const handleLogout = async () => {
+    try {
+      const accessToken = localStorage.getItem('accessToken');
+      const response = await fetch('http://localhost:8080/logout', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        // credentials: 'include' 옵션을 추가하여 쿠키(리프레시 토큰)를 함께 전송
+        credentials: 'include'
+      });
+  
+      if (response.ok) {
+        // 로컬 스토리지의 액세스 토큰 제거
+        localStorage.removeItem('accessToken');
+        setIsLoggedIn(false);
+        setUserInfo(null);
+        navigate('/');
+      } else {
+        console.error('로그아웃 실패');
+      }
+    } catch (error) {
+      console.error('로그아웃 처리 중 에러:', error);
+    }
   };
 
   useEffect(() => {
@@ -94,7 +114,7 @@ const Header = () => {
             className="flex items-center space-x-2 px-4 py-2 bg-[#FEE500] hover:bg-[#FDD835] transition-colors rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-400"
           >
             <img 
-              src="image/kakao_login_medium.png"
+              src="image/kakao_login_small.png"
               alt="카카오 로그인"
               className="h-6"
             />
