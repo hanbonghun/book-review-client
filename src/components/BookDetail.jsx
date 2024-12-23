@@ -10,6 +10,9 @@ const BookDetail = () => {
     const [nextCursor, setNextCursor] = useState(null);
     const [hasNext, setHasNext] = useState(true);
     const [reviewsLoading, setReviewsLoading] = useState(false);
+    const [expandedStates, setExpandedStates] = useState({
+      description: false,
+    });
     const observerRef = useRef(null);
 
   useEffect(() => {
@@ -138,11 +141,17 @@ const BookDetail = () => {
     ));
   };
 
-  const ExpandableText = ({ text, maxLength }) => {
-    const [isExpanded, setIsExpanded] = useState(false);
+  const ExpandableText = ({ text, maxLength, id }) => {
     const shouldShowButton = text.length > maxLength;
-  
+    const isExpanded = expandedStates[id];
     const displayText = isExpanded ? text : text.slice(0, maxLength);
+  
+    const handleToggle = () => {
+      setExpandedStates(prev => ({
+        ...prev,
+        [id]: !prev[id]
+      }));
+    };
   
     return (
       <div className="relative">
@@ -160,8 +169,8 @@ const BookDetail = () => {
         {shouldShowButton && (
           <div className="flex justify-start mt-2">
             <button
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="text-gray-500 hover:text-gray-700 text-sm hover:underline transition-all duration-200 font-bold"
+              onClick={handleToggle}
+              className="text-gray-500 hover:text-gray-700 text-sm hover:underline transition-all duration-200 font-bold px-1 py-0.5"
             >
               {isExpanded ? '접기 ∧' : '더보기 ∨'}
             </button>
@@ -169,7 +178,7 @@ const BookDetail = () => {
         )}
       </div>
     );
-    }
+  }
 
   if (loading) {
     return (
@@ -221,9 +230,13 @@ const BookDetail = () => {
             </div>
             
             <div className="mt-6">
-              <h2 className="text-xl font-semibold mb-2">책 소개</h2>
-              <ExpandableText text={book.description || '책 소개가 없습니다.'} maxLength={200} />
-            </div>
+          <h2 className="text-xl font-semibold mb-2">책 소개</h2>
+          <ExpandableText 
+            text={book.description || '책 소개가 없습니다.'} 
+            maxLength={200}
+            id="description"
+          />
+        </div>
           </div>
         </div>
 
