@@ -3,14 +3,14 @@ import { useParams } from 'react-router-dom';
 import { Star, ThumbsUp } from 'lucide-react'
 
 const BookDetail = () => {
-  const { isbn } = useParams();
-  const [book, setBook] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [reviews, setReviews] = useState([]);
-  const [nextCursor, setNextCursor] = useState(null);
-  const [hasNext, setHasNext] = useState(true);
-  const [reviewsLoading, setReviewsLoading] = useState(false);
-  const observerRef = useRef(null);
+    const { isbn } = useParams();
+    const [book, setBook] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [reviews, setReviews] = useState([]);
+    const [nextCursor, setNextCursor] = useState(null);
+    const [hasNext, setHasNext] = useState(true);
+    const [reviewsLoading, setReviewsLoading] = useState(false);
+    const observerRef = useRef(null);
 
   useEffect(() => {
     const fetchBookDetail = async () => {
@@ -53,16 +53,11 @@ const BookDetail = () => {
       const data = await response.json();
 
       if (data.result === 'SUCCESS') {
-        const reviewsWithLikes = data.data.reviews.map(review => ({
-          ...review,
-          isLiked: review.isLiked || false,
-          likeCount: review.likeCount || 0
-        }));
-        
+        // 서버에서 받은 데이터 그대로 사용
         if (cursor) {
-          setReviews(prev => [...prev, ...reviewsWithLikes]);
+          setReviews(prev => [...prev, ...data.data.reviews]);
         } else {
-          setReviews(reviewsWithLikes);
+          setReviews(data.data.reviews);
         }
         setNextCursor(data.data.nextCursor);
         setHasNext(data.data.hasNext);
@@ -74,10 +69,10 @@ const BookDetail = () => {
     }
   };
 
-  const handleLike = async (reviewId, isCurrentlyLiked) => {
+  const handleLike = async (reviewId, likedByCurrentUser) => {
     try {
       const accessToken = localStorage.getItem('accessToken');
-      const method = isCurrentlyLiked ? 'DELETE' : 'POST';
+      const method = likedByCurrentUser ? 'DELETE' : 'POST';
       
       const response = await fetch(`http://localhost:8080/api/reviews/${reviewId}/likes`, {
         method,
@@ -92,8 +87,8 @@ const BookDetail = () => {
             review.id === reviewId
               ? {
                   ...review,
-                  isLiked: !isCurrentlyLiked,
-                  likeCount: isCurrentlyLiked 
+                  likedByCurrentUser: !likedByCurrentUser,
+                  likeCount: likedByCurrentUser 
                     ? review.likeCount - 1 
                     : review.likeCount + 1
                 }
@@ -142,6 +137,7 @@ const BookDetail = () => {
       />
     ));
   };
+
 
   if (loading) {
     return (
@@ -201,8 +197,8 @@ const BookDetail = () => {
           </div>
         </div>
 
-{/* 리뷰 섹션 */}
-<div className="mt-8">
+ {/* 리뷰 섹션 */}
+ <div className="mt-8">
           <h2 className="text-2xl font-bold mb-4">리뷰</h2>
           <div className="space-y-4">
             {reviews.length > 0 ? (
@@ -226,14 +222,14 @@ const BookDetail = () => {
                   <p className="text-gray-700 mb-2">{review.content}</p>
                   <div className="flex items-center space-x-2">
                     <button
-                      onClick={() => handleLike(review.id, review.isLiked)}
+                      onClick={() => handleLike(review.id, review.likedByCurrentUser)}
                       className={`flex items-center space-x-1 px-3 py-1 rounded-md transition-colors ${
-                        review.isLiked
+                        review.likedByCurrentUser
                           ? 'bg-blue-100 text-blue-600'
                           : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                       }`}
                     >
-                      <ThumbsUp size={16} className={review.isLiked ? 'fill-blue-600' : ''} />
+                      <ThumbsUp size={16} className={review.likedByCurrentUser ? 'fill-blue-600' : ''} />
                       <span>{review.likeCount}</span>
                     </button>
                   </div>
