@@ -1,12 +1,13 @@
 import Header from './components/Header'
+import { BrowserRouter } from 'react-router-dom';
 
 function App() {
   return (
     <>
+    <BrowserRouter>
       <Header />
-      <main className="max-w-6xl mx-auto px-4 py-8">
-        {/* 여기에 다른 내용을 추가하시면 됩니다 */}
-      </main>
+      {/* 다른 컴포넌트들 */}
+    </BrowserRouter>
     </>
   )
 }
