@@ -138,6 +138,38 @@ const BookDetail = () => {
     ));
   };
 
+  const ExpandableText = ({ text, maxLength }) => {
+    const [isExpanded, setIsExpanded] = useState(false);
+    const shouldShowButton = text.length > maxLength;
+  
+    const displayText = isExpanded ? text : text.slice(0, maxLength);
+  
+    return (
+      <div className="relative">
+        <div className={`relative ${!isExpanded && shouldShowButton ? 'max-h-48 overflow-hidden' : ''}`}>
+          <p className="text-gray-700 whitespace-pre-line leading-relaxed">
+            {displayText}
+            {!isExpanded && shouldShowButton && '...'}
+          </p>
+          
+          {!isExpanded && shouldShowButton && (
+            <div className="absolute bottom-0 left-0 w-full h-12 bg-gradient-to-t from-white to-transparent" />
+          )}
+        </div>
+        
+        {shouldShowButton && (
+          <div className="flex justify-start mt-2">
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="text-gray-500 hover:text-gray-700 text-sm hover:underline transition-all duration-200 font-bold"
+            >
+              {isExpanded ? '접기 ∧' : '더보기 ∨'}
+            </button>
+          </div>
+        )}
+      </div>
+    );
+    }
 
   if (loading) {
     return (
@@ -190,15 +222,13 @@ const BookDetail = () => {
             
             <div className="mt-6">
               <h2 className="text-xl font-semibold mb-2">책 소개</h2>
-              <p className="text-gray-700 whitespace-pre-line">
-                {book.description || '책 소개가 없습니다.'}
-              </p>
+              <ExpandableText text={book.description || '책 소개가 없습니다.'} maxLength={200} />
             </div>
           </div>
         </div>
 
- {/* 리뷰 섹션 */}
- <div className="mt-8">
+        {/* 리뷰 섹션 */}
+        <div className="mt-8">
           <h2 className="text-2xl font-bold mb-4">리뷰</h2>
           <div className="space-y-4">
             {reviews.length > 0 ? (
