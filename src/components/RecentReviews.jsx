@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Star } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const RecentReviews = () => {
+  const navigate = useNavigate();
   const [reviews, setReviews] = useState([]);
   const [nextCursor, setNextCursor] = useState(null);
   const [hasNext, setHasNext] = useState(true);
@@ -18,14 +20,13 @@ const RecentReviews = () => {
         url.searchParams.set('cursor', cursor);
       }
 
-
       const accessToken = localStorage.getItem('accessToken');
       const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${accessToken}`
         }
       });
-            const data = await response.json();
+      const data = await response.json();
 
       if (data.result === 'SUCCESS') {
         if (cursor) {
@@ -80,6 +81,10 @@ const RecentReviews = () => {
     ));
   };
 
+  const handleBookClick = (isbn) => {
+    navigate(`/books/${isbn}`);
+  };
+
   return (
     <div className="max-w-full px-4 py-8">
       <h2 className="text-2xl font-bold mb-6 px-4">최근 리뷰</h2>
@@ -95,8 +100,9 @@ const RecentReviews = () => {
         {reviews.map((review, index) => (
           <div
             ref={index === reviews.length - 1 ? lastReviewRef : null}
-            key={review.id}
-            className="flex-none w-80 bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-6 snap-start"
+            key={`${review.id}-${index}`}
+            className="flex-none w-80 bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-6 snap-start cursor-pointer"
+            onClick={() => handleBookClick(review.isbn)}
           >
             <h3 className="text-xl font-semibold mb-2 line-clamp-2">{review.bookTitle}</h3>
             <p className="text-sm text-gray-600 mb-2 line-clamp-1">
@@ -119,7 +125,6 @@ const RecentReviews = () => {
         )}
       </div>
       <style>{`
-        /* Hide scrollbar for Chrome, Safari and Opera */
         div::-webkit-scrollbar {
           display: none;
         }
