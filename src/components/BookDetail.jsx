@@ -1,10 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
+import { Star, ThumbsUp } from 'lucide-react'
 
 const BookDetail = () => {
   const { isbn } = useParams();
   const [book, setBook] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [reviews, setReviews] = useState([]);
+  const [nextCursor, setNextCursor] = useState(null);
+  const [hasNext, setHasNext] = useState(true);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const observerRef = useRef(null);
 
   useEffect(() => {
     const fetchBookDetail = async () => {
@@ -26,9 +32,116 @@ const BookDetail = () => {
         setLoading(false);
       }
     };
-
     fetchBookDetail();
   }, [isbn]);
+
+  const fetchReviews = async (cursor = null) => {
+    try {
+      setReviewsLoading(true);
+      const url = new URL(`http://localhost:8080/api/books/${isbn}/reviews`);
+      url.searchParams.set('size', '5');
+      if (cursor) {
+        url.searchParams.set('cursor', cursor);
+      }
+
+      const accessToken = localStorage.getItem('accessToken');
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        }
+      });
+      const data = await response.json();
+
+      if (data.result === 'SUCCESS') {
+        const reviewsWithLikes = data.data.reviews.map(review => ({
+          ...review,
+          isLiked: review.isLiked || false,
+          likeCount: review.likeCount || 0
+        }));
+        
+        if (cursor) {
+          setReviews(prev => [...prev, ...reviewsWithLikes]);
+        } else {
+          setReviews(reviewsWithLikes);
+        }
+        setNextCursor(data.data.nextCursor);
+        setHasNext(data.data.hasNext);
+      }
+    } catch (error) {
+      console.error('리뷰를 불러오는 중 오류 발생:', error);
+    } finally {
+      setReviewsLoading(false);
+    }
+  };
+
+  const handleLike = async (reviewId, isCurrentlyLiked) => {
+    try {
+      const accessToken = localStorage.getItem('accessToken');
+      const method = isCurrentlyLiked ? 'DELETE' : 'POST';
+      
+      const response = await fetch(`http://localhost:8080/api/reviews/${reviewId}/likes`, {
+        method,
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        }
+      });
+
+      if (response.ok) {
+        setReviews(prevReviews => 
+          prevReviews.map(review => 
+            review.id === reviewId
+              ? {
+                  ...review,
+                  isLiked: !isCurrentlyLiked,
+                  likeCount: isCurrentlyLiked 
+                    ? review.likeCount - 1 
+                    : review.likeCount + 1
+                }
+              : review
+          )
+        );
+      }
+    } catch (error) {
+      console.error('좋아요 처리 중 오류 발생:', error);
+    }
+  };
+
+  const lastReviewRef = useCallback(node => {
+    if (reviewsLoading) return;
+    
+    if (observerRef.current) {
+      observerRef.current.disconnect();
+    }
+
+    observerRef.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasNext) {
+        fetchReviews(nextCursor);
+      }
+    }, { threshold: 1.0 });
+
+    if (node) {
+      observerRef.current.observe(node);
+    }
+  }, [reviewsLoading, hasNext, nextCursor]);
+
+  useEffect(() => {
+    fetchReviews();
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+      }
+    };
+  }, [isbn]);
+
+  const renderStars = (rating) => {
+    return Array(5).fill(0).map((_, index) => (
+      <Star
+        key={index}
+        size={16}
+        className={index < rating ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300'}
+      />
+    ));
+  };
 
   if (loading) {
     return (
@@ -61,7 +174,6 @@ const BookDetail = () => {
               }}
             />
           </div>
-
           {/* 책 정보 */}
           <div className="flex-1">
             <h1 className="text-3xl font-bold mb-4">{book.title}</h1>
@@ -89,10 +201,53 @@ const BookDetail = () => {
           </div>
         </div>
 
-        {/* 여기에 리뷰 섹션을 추가할 수 있습니다 */}
-        <div className="mt-8">
+{/* 리뷰 섹션 */}
+<div className="mt-8">
           <h2 className="text-2xl font-bold mb-4">리뷰</h2>
-          <p className="text-gray-500">아직 리뷰 기능이 준비중입니다.</p>
+          <div className="space-y-4">
+            {reviews.length > 0 ? (
+              reviews.map((review, index) => (
+                <div
+                  ref={index === reviews.length - 1 ? lastReviewRef : null}
+                  key={`${review.id}-${index}`}
+                  className="bg-gray-50 rounded-lg p-4"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center space-x-2">
+                      <span className="font-semibold">{review.memberName}</span>
+                      <div className="flex items-center space-x-1">
+                        {renderStars(review.rating)}
+                      </div>
+                    </div>
+                    <span className="text-sm text-gray-500">
+                      {new Date(review.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <p className="text-gray-700 mb-2">{review.content}</p>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => handleLike(review.id, review.isLiked)}
+                      className={`flex items-center space-x-1 px-3 py-1 rounded-md transition-colors ${
+                        review.isLiked
+                          ? 'bg-blue-100 text-blue-600'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      <ThumbsUp size={16} className={review.isLiked ? 'fill-blue-600' : ''} />
+                      <span>{review.likeCount}</span>
+                    </button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-gray-500">아직 작성된 리뷰가 없습니다.</p>
+            )}
+            {reviewsLoading && (
+              <div className="text-center py-4">
+                <div className="text-gray-500">리뷰를 불러오는 중...</div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

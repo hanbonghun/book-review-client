@@ -14,7 +14,7 @@ const RecentReviews = () => {
   const fetchReviews = async (cursor = null) => {
     try {
       setLoading(true);
-      const url = new URL('http://localhost:8080/api/reviews');
+      const url = new URL('http://localhost:8080/api/reviews/recent');
       url.searchParams.set('size', '3');
       if (cursor) {
         url.searchParams.set('cursor', cursor);
